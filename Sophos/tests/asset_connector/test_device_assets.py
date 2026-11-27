@@ -19,6 +19,7 @@ from sophos_module.asset_connector.model import (
     SophosAssociatedPerson,
     SophosCloud,
     SophosEndpoint,
+    SophosGroup,
     SophosHealth,
     SophosIsolation,
     SophosOS,
@@ -197,59 +198,71 @@ def connector(symphony_storage):
     return c
 
 
+def _computer_with(**update):
+    """Return a copy of COMPUTER_ENDPOINT with the given fields overridden."""
+    return COMPUTER_ENDPOINT.model_copy(update=update)
+
+
 class TestGetOs:
-    def test_windows(self, connector):
-        os_obj = connector._get_os(COMPUTER_ENDPOINT)
-        assert os_obj.type_id == OSTypeId.WINDOWS
-        assert os_obj.type == OSTypeStr.WINDOWS
-        assert os_obj.name == "Windows 10 Pro"
-
-    def test_linux(self, connector):
-        os_obj = connector._get_os(SERVER_ENDPOINT)
-        assert os_obj.type_id == OSTypeId.LINUX
-        assert os_obj.type == OSTypeStr.LINUX
-
-    def test_macos(self, connector):
-        ep = SophosEndpoint(id="x", hostname="h", os=SophosOS(platform="macos", name="macOS 14"))
-        os_obj = connector._get_os(ep)
-        assert os_obj.type_id == OSTypeId.MACOS
-
-    def test_android(self, connector):
-        ep = SophosEndpoint(id="x", hostname="h", os=SophosOS(platform="android", name="Android 13"))
-        os_obj = connector._get_os(ep)
-        assert os_obj.type_id == OSTypeId.ANDROID
-
-    def test_unknown_platform(self, connector):
-        ep = SophosEndpoint(id="x", hostname="h", os=SophosOS(platform="exotic", name="Exotic OS"))
-        os_obj = connector._get_os(ep)
-        assert os_obj.type_id == OSTypeId.UNKNOWN
-
-    def test_missing_os_key(self, connector):
-        ep = SophosEndpoint(id="x", hostname="h")
-        os_obj = connector._get_os(ep)
-        assert os_obj.type_id == OSTypeId.UNKNOWN
+    @pytest.mark.parametrize(
+        "endpoint, expected_type_id, expected_type, expected_name",
+        [
+            pytest.param(COMPUTER_ENDPOINT, OSTypeId.WINDOWS, OSTypeStr.WINDOWS, "Windows 10 Pro", id="windows"),
+            pytest.param(SERVER_ENDPOINT, OSTypeId.LINUX, OSTypeStr.LINUX, "Ubuntu 22.04 LTS", id="linux"),
+            pytest.param(
+                SophosEndpoint(id="x", hostname="h", os=SophosOS(platform="macos", name="macOS 14")),
+                OSTypeId.MACOS,
+                OSTypeStr.MACOS,
+                "macOS 14",
+                id="macos",
+            ),
+            pytest.param(
+                SophosEndpoint(id="x", hostname="h", os=SophosOS(platform="android", name="Android 13")),
+                OSTypeId.ANDROID,
+                OSTypeStr.ANDROID,
+                "Android 13",
+                id="android",
+            ),
+            pytest.param(
+                SophosEndpoint(id="x", hostname="h", os=SophosOS(platform="exotic", name="Exotic OS")),
+                OSTypeId.UNKNOWN,
+                OSTypeStr.UNKNOWN,
+                "Exotic OS",
+                id="unknown_platform",
+            ),
+            pytest.param(
+                SophosEndpoint(id="x", hostname="h"), OSTypeId.UNKNOWN, OSTypeStr.UNKNOWN, None, id="missing_os_key"
+            ),
+        ],
+    )
+    def test_get_os(self, connector, endpoint, expected_type_id, expected_type, expected_name):
+        os_obj = connector._get_os(endpoint)
+        assert os_obj.type_id == expected_type_id
+        assert os_obj.type == expected_type
+        assert os_obj.name == expected_name
 
 
 class TestGetDeviceType:
-    def test_computer(self):
-        type_id, type_str = SophosDeviceAssetConnector._get_device_type(COMPUTER_ENDPOINT)
-        assert type_id == DeviceTypeId.DESKTOP
-        assert type_str == DeviceTypeStr.DESKTOP
-
-    def test_server(self):
-        type_id, type_str = SophosDeviceAssetConnector._get_device_type(SERVER_ENDPOINT)
-        assert type_id == DeviceTypeId.SERVER
-        assert type_str == DeviceTypeStr.SERVER
-
-    def test_unknown(self):
-        ep = SophosEndpoint(id="x", hostname="h", type="tablet")
-        type_id, _ = SophosDeviceAssetConnector._get_device_type(ep)
-        assert type_id == DeviceTypeId.UNKNOWN
-
-    def test_missing_key(self):
-        ep = SophosEndpoint(id="x", hostname="h")
-        type_id, _ = SophosDeviceAssetConnector._get_device_type(ep)
-        assert type_id == DeviceTypeId.UNKNOWN
+    @pytest.mark.parametrize(
+        "endpoint, expected_type_id, expected_type",
+        [
+            pytest.param(COMPUTER_ENDPOINT, DeviceTypeId.DESKTOP, DeviceTypeStr.DESKTOP, id="computer"),
+            pytest.param(SERVER_ENDPOINT, DeviceTypeId.SERVER, DeviceTypeStr.SERVER, id="server"),
+            pytest.param(
+                SophosEndpoint(id="x", hostname="h", type="tablet"),
+                DeviceTypeId.UNKNOWN,
+                DeviceTypeStr.UNKNOWN,
+                id="unknown",
+            ),
+            pytest.param(
+                SophosEndpoint(id="x", hostname="h"), DeviceTypeId.UNKNOWN, DeviceTypeStr.UNKNOWN, id="missing_key"
+            ),
+        ],
+    )
+    def test_get_device_type(self, endpoint, expected_type_id, expected_type):
+        type_id, type_str = SophosDeviceAssetConnector._get_device_type(endpoint)
+        assert type_id == expected_type_id
+        assert type_str == expected_type
 
 
 class TestGetNetworkInterfaces:
@@ -302,57 +315,56 @@ class TestGetNetworkInterfaces:
 
 
 class TestNormalizeMac:
-    def test_dashes_to_colons(self):
-        assert SophosDeviceAssetConnector._normalize_mac("aa-bb-cc-dd-ee-ff") == "AA:BB:CC:DD:EE:FF"
-
-    def test_already_correct(self):
-        assert SophosDeviceAssetConnector._normalize_mac("AA:BB:CC:DD:EE:FF") == "AA:BB:CC:DD:EE:FF"
-
-    def test_none_input(self):
-        assert SophosDeviceAssetConnector._normalize_mac(None) is None
-
-    def test_empty_string(self):
-        assert SophosDeviceAssetConnector._normalize_mac("") is None
+    @pytest.mark.parametrize(
+        "mac, expected",
+        [
+            pytest.param("aa-bb-cc-dd-ee-ff", "AA:BB:CC:DD:EE:FF", id="dashes_to_colons"),
+            pytest.param("AA:BB:CC:DD:EE:FF", "AA:BB:CC:DD:EE:FF", id="already_correct"),
+            pytest.param(None, None, id="none_input"),
+            pytest.param("", None, id="empty_string"),
+        ],
+    )
+    def test_normalize_mac(self, mac, expected):
+        assert SophosDeviceAssetConnector._normalize_mac(mac) == expected
 
 
 class TestIsCompliant:
-    def test_good(self):
-        ep = SophosEndpoint(id="x", hostname="h", health=SophosHealth(overall="good"))
-        assert SophosDeviceAssetConnector._is_compliant(ep) is True
-
-    def test_bad(self):
-        ep = SophosEndpoint(id="x", hostname="h", health=SophosHealth(overall="bad"))
-        assert SophosDeviceAssetConnector._is_compliant(ep) is False
-
-    def test_suspicious(self):
-        ep = SophosEndpoint(id="x", hostname="h", health=SophosHealth(overall="suspicious"))
-        assert SophosDeviceAssetConnector._is_compliant(ep) is False
-
-    def test_unknown_value(self):
-        ep = SophosEndpoint(id="x", hostname="h", health=SophosHealth(overall="unknown"))
-        assert SophosDeviceAssetConnector._is_compliant(ep) is None
-
-    def test_missing_health(self):
-        ep = SophosEndpoint(id="x", hostname="h")
-        assert SophosDeviceAssetConnector._is_compliant(ep) is None
+    @pytest.mark.parametrize(
+        "endpoint, expected",
+        [
+            pytest.param(SophosEndpoint(id="x", hostname="h", health=SophosHealth(overall="good")), True, id="good"),
+            pytest.param(SophosEndpoint(id="x", hostname="h", health=SophosHealth(overall="bad")), False, id="bad"),
+            pytest.param(
+                SophosEndpoint(id="x", hostname="h", health=SophosHealth(overall="suspicious")),
+                False,
+                id="suspicious",
+            ),
+            pytest.param(
+                SophosEndpoint(id="x", hostname="h", health=SophosHealth(overall="unknown")),
+                None,
+                id="unknown_value",
+            ),
+            pytest.param(SophosEndpoint(id="x", hostname="h"), None, id="missing_health"),
+        ],
+    )
+    def test_is_compliant(self, endpoint, expected):
+        assert SophosDeviceAssetConnector._is_compliant(endpoint) is expected
 
 
 class TestGetFirewallStatus:
-    def test_enabled(self):
-        ep = SophosEndpoint(id="x", hostname="h", tamperProtectionEnabled=True)
-        assert SophosDeviceAssetConnector._get_firewall_status(ep) == "Enabled"
-
-    def test_disabled(self):
-        ep = SophosEndpoint(id="x", hostname="h", tamperProtectionEnabled=False)
-        assert SophosDeviceAssetConnector._get_firewall_status(ep) == "Disabled"
-
-    def test_none_value(self):
-        ep = SophosEndpoint(id="x", hostname="h", tamperProtectionEnabled=None)
-        assert SophosDeviceAssetConnector._get_firewall_status(ep) is None
-
-    def test_missing_key(self):
-        ep = SophosEndpoint(id="x", hostname="h")
-        assert SophosDeviceAssetConnector._get_firewall_status(ep) is None
+    @pytest.mark.parametrize(
+        "endpoint, expected",
+        [
+            pytest.param(SophosEndpoint(id="x", hostname="h", tamperProtectionEnabled=True), "Enabled", id="enabled"),
+            pytest.param(
+                SophosEndpoint(id="x", hostname="h", tamperProtectionEnabled=False), "Disabled", id="disabled"
+            ),
+            pytest.param(SophosEndpoint(id="x", hostname="h", tamperProtectionEnabled=None), None, id="none_value"),
+            pytest.param(SophosEndpoint(id="x", hostname="h"), None, id="missing_key"),
+        ],
+    )
+    def test_get_firewall_status(self, endpoint, expected):
+        assert SophosDeviceAssetConnector._get_firewall_status(endpoint) == expected
 
 
 class TestGetOrganization:
@@ -361,13 +373,15 @@ class TestGetOrganization:
         assert org is not None
         assert org.uid == "bbbbbbbb-0000-0000-0000-000000000001"
 
-    def test_tenant_missing(self):
-        ep = SophosEndpoint(id="x", hostname="h")
-        assert SophosDeviceAssetConnector._get_organization(ep) is None
-
-    def test_tenant_empty_id(self):
-        ep = SophosEndpoint(id="x", hostname="h", tenant=SophosTenant(id=""))
-        assert SophosDeviceAssetConnector._get_organization(ep) is None
+    @pytest.mark.parametrize(
+        "endpoint",
+        [
+            pytest.param(SophosEndpoint(id="x", hostname="h"), id="tenant_missing"),
+            pytest.param(SophosEndpoint(id="x", hostname="h", tenant=SophosTenant(id="")), id="tenant_empty_id"),
+        ],
+    )
+    def test_no_organization(self, endpoint):
+        assert SophosDeviceAssetConnector._get_organization(endpoint) is None
 
 
 class TestParseTs:
@@ -376,14 +390,16 @@ class TestParseTs:
         assert isinstance(ts, float)
         assert ts > 0
 
-    def test_none_input(self):
-        assert SophosDeviceAssetConnector._parse_ts(None) is None
-
-    def test_empty_string(self):
-        assert SophosDeviceAssetConnector._parse_ts("") is None
-
-    def test_invalid_string(self):
-        assert SophosDeviceAssetConnector._parse_ts("not-a-date") is None
+    @pytest.mark.parametrize(
+        "value",
+        [
+            pytest.param(None, id="none_input"),
+            pytest.param("", id="empty_string"),
+            pytest.param("not-a-date", id="invalid_string"),
+        ],
+    )
+    def test_unparsable_returns_none(self, value):
+        assert SophosDeviceAssetConnector._parse_ts(value) is None
 
 
 class TestMapDeviceFields:
@@ -410,18 +426,20 @@ class TestMapDeviceFields:
         assert result.device.os.type_id == OSTypeId.LINUX
         assert result.device.is_compliant is True
 
-    def test_missing_id_returns_none(self, connector):
-        ep = COMPUTER_ENDPOINT.model_copy(update={"id": None})
+    @pytest.mark.parametrize(
+        "missing_field",
+        [
+            pytest.param("id", id="missing_id"),
+            pytest.param("hostname", id="missing_hostname"),
+        ],
+    )
+    def test_missing_mandatory_field_returns_none(self, connector, missing_field):
+        ep = _computer_with(**{missing_field: None})
         assert connector.map_device_fields(ep) is None
         connector.log.assert_called()
 
-    def test_missing_hostname_returns_none(self, connector):
-        ep = COMPUTER_ENDPOINT.model_copy(update={"hostname": None})
-        assert connector.map_device_fields(ep) is None
-
     def test_no_cloud_field(self, connector):
-        ep = COMPUTER_ENDPOINT.model_copy(update={"cloud": None})
-        result = connector.map_device_fields(ep)
+        result = connector.map_device_fields(_computer_with(cloud=None))
         assert result is not None
         assert result.device.region is None
 
@@ -499,17 +517,18 @@ class TestIterEndpoints:
 
 
 class TestUpdateCheckpoint:
-    def test_writes_latest_time(self, connector):
-        connector._latest_time = "2025-01-01T00:00:00.000Z"
+    @pytest.mark.parametrize(
+        "latest_time",
+        [
+            pytest.param("2025-01-01T00:00:00.000Z", id="writes_latest_time"),
+            pytest.param(None, id="no_update_when_no_latest_time"),
+        ],
+    )
+    def test_update_checkpoint(self, connector, latest_time):
+        connector._latest_time = latest_time
         connector.update_checkpoint()
         with connector.context as cache:
-            assert cache.get("last_seen_cursor") == "2025-01-01T00:00:00.000Z"
-
-    def test_no_update_when_no_latest_time(self, connector):
-        connector._latest_time = None
-        connector.update_checkpoint()
-        with connector.context as cache:
-            assert cache.get("last_seen_cursor") is None
+            assert cache.get("last_seen_cursor") == latest_time
 
 
 class TestGetAssets:
@@ -685,125 +704,112 @@ class TestSaveSentIds:
 
 
 class TestComputeFingerprint:
-    def test_same_endpoint_same_fingerprint(self):
-        fp1 = SophosDeviceAssetConnector._compute_fingerprint(COMPUTER_ENDPOINT)
-        fp2 = SophosDeviceAssetConnector._compute_fingerprint(COMPUTER_ENDPOINT)
-        assert fp1 == fp2
-
-    def test_different_endpoints_different_fingerprint(self):
-        fp1 = SophosDeviceAssetConnector._compute_fingerprint(COMPUTER_ENDPOINT)
-        fp2 = SophosDeviceAssetConnector._compute_fingerprint(SERVER_ENDPOINT)
-        assert fp1 != fp2
-
-    def test_last_seen_at_change_does_not_change_fingerprint(self):
-        ep_a = COMPUTER_ENDPOINT.model_copy(update={"lastSeenAt": "2026-01-01T00:00:00.000Z"})
-        ep_b = COMPUTER_ENDPOINT.model_copy(update={"lastSeenAt": "2026-06-01T12:00:00.000Z"})
+    @pytest.mark.parametrize(
+        "ep_a, ep_b",
+        [
+            pytest.param(COMPUTER_ENDPOINT, COMPUTER_ENDPOINT, id="same_endpoint"),
+            pytest.param(
+                _computer_with(lastSeenAt="2026-01-01T00:00:00.000Z"),
+                _computer_with(lastSeenAt="2026-06-01T12:00:00.000Z"),
+                id="last_seen_at_change",
+            ),
+            # registeredAt is excluded; changing it must not affect the fingerprint.
+            pytest.param(
+                _computer_with(registeredAt="2023-01-01T00:00:00.000Z"),
+                _computer_with(registeredAt="2025-01-01T00:00:00.000Z"),
+                id="registered_at_change",
+            ),
+            pytest.param(
+                _computer_with(ipv4Addresses=["10.0.0.1", "10.0.0.2"]),
+                _computer_with(ipv4Addresses=["10.0.0.2", "10.0.0.1"]),
+                id="ip_order",
+            ),
+            pytest.param(
+                _computer_with(macAddresses=["AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02"]),
+                _computer_with(macAddresses=["AA:BB:CC:DD:EE:02", "AA:BB:CC:DD:EE:01"]),
+                id="mac_order",
+            ),
+        ],
+    )
+    def test_fingerprint_unchanged(self, ep_a, ep_b):
         assert SophosDeviceAssetConnector._compute_fingerprint(
             ep_a
         ) == SophosDeviceAssetConnector._compute_fingerprint(ep_b)
 
-    def test_registered_at_change_does_not_change_fingerprint(self):
-        """registeredAt is excluded; changing it must not affect the fingerprint."""
-        ep_a = COMPUTER_ENDPOINT.model_copy(update={"registeredAt": "2023-01-01T00:00:00.000Z"})
-        ep_b = COMPUTER_ENDPOINT.model_copy(update={"registeredAt": "2025-01-01T00:00:00.000Z"})
-        assert SophosDeviceAssetConnector._compute_fingerprint(
-            ep_a
-        ) == SophosDeviceAssetConnector._compute_fingerprint(ep_b)
-
-    def test_hostname_change_changes_fingerprint(self):
-        ep_a = COMPUTER_ENDPOINT.model_copy(update={"hostname": "host-a"})
-        ep_b = COMPUTER_ENDPOINT.model_copy(update={"hostname": "host-b"})
+    @pytest.mark.parametrize(
+        "ep_a, ep_b",
+        [
+            pytest.param(COMPUTER_ENDPOINT, SERVER_ENDPOINT, id="different_endpoints"),
+            pytest.param(_computer_with(hostname="host-a"), _computer_with(hostname="host-b"), id="hostname_change"),
+            pytest.param(
+                _computer_with(health=SophosHealth(overall="good")),
+                _computer_with(health=SophosHealth(overall="bad")),
+                id="health_change",
+            ),
+            pytest.param(
+                _computer_with(ipv4Addresses=["192.0.2.1"]),
+                _computer_with(ipv4Addresses=["10.0.0.1"]),
+                id="ip_change",
+            ),
+            pytest.param(
+                _computer_with(tamperProtectionEnabled=True),
+                _computer_with(tamperProtectionEnabled=False),
+                id="tamper_protection_change",
+            ),
+            pytest.param(
+                _computer_with(isolation=SophosIsolation(status="notIsolated")),
+                _computer_with(isolation=SophosIsolation(status="isolated")),
+                id="isolation_status_change",
+            ),
+            pytest.param(
+                _computer_with(os=SophosOS(platform="windows", name="Windows 10")),
+                _computer_with(os=SophosOS(platform="windows", name="Windows 11")),
+                id="os_change",
+            ),
+        ],
+    )
+    def test_fingerprint_changed(self, ep_a, ep_b):
         assert SophosDeviceAssetConnector._compute_fingerprint(
             ep_a
         ) != SophosDeviceAssetConnector._compute_fingerprint(ep_b)
 
-    def test_health_change_changes_fingerprint(self):
-        ep_good = COMPUTER_ENDPOINT.model_copy(update={"health": SophosHealth(overall="good")})
-        ep_bad = COMPUTER_ENDPOINT.model_copy(update={"health": SophosHealth(overall="bad")})
-        assert SophosDeviceAssetConnector._compute_fingerprint(
-            ep_good
-        ) != SophosDeviceAssetConnector._compute_fingerprint(ep_bad)
-
-    def test_ip_change_changes_fingerprint(self):
-        ep_a = COMPUTER_ENDPOINT.model_copy(update={"ipv4Addresses": ["192.0.2.1"]})
-        ep_b = COMPUTER_ENDPOINT.model_copy(update={"ipv4Addresses": ["10.0.0.1"]})
-        assert SophosDeviceAssetConnector._compute_fingerprint(
-            ep_a
-        ) != SophosDeviceAssetConnector._compute_fingerprint(ep_b)
-
-    def test_ip_order_does_not_matter(self):
-        ep_a = COMPUTER_ENDPOINT.model_copy(update={"ipv4Addresses": ["10.0.0.1", "10.0.0.2"]})
-        ep_b = COMPUTER_ENDPOINT.model_copy(update={"ipv4Addresses": ["10.0.0.2", "10.0.0.1"]})
-        assert SophosDeviceAssetConnector._compute_fingerprint(
-            ep_a
-        ) == SophosDeviceAssetConnector._compute_fingerprint(ep_b)
-
-    def test_mac_order_does_not_matter(self):
-        ep_a = COMPUTER_ENDPOINT.model_copy(update={"macAddresses": ["AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02"]})
-        ep_b = COMPUTER_ENDPOINT.model_copy(update={"macAddresses": ["AA:BB:CC:DD:EE:02", "AA:BB:CC:DD:EE:01"]})
-        assert SophosDeviceAssetConnector._compute_fingerprint(
-            ep_a
-        ) == SophosDeviceAssetConnector._compute_fingerprint(ep_b)
-
-    def test_tamper_protection_change_changes_fingerprint(self):
-        ep_on = COMPUTER_ENDPOINT.model_copy(update={"tamperProtectionEnabled": True})
-        ep_off = COMPUTER_ENDPOINT.model_copy(update={"tamperProtectionEnabled": False})
-        assert SophosDeviceAssetConnector._compute_fingerprint(
-            ep_on
-        ) != SophosDeviceAssetConnector._compute_fingerprint(ep_off)
-
-    def test_isolation_status_change_changes_fingerprint(self):
-        ep_free = COMPUTER_ENDPOINT.model_copy(update={"isolation": SophosIsolation(status="notIsolated")})
-        ep_isolated = COMPUTER_ENDPOINT.model_copy(update={"isolation": SophosIsolation(status="isolated")})
-        assert SophosDeviceAssetConnector._compute_fingerprint(
-            ep_free
-        ) != SophosDeviceAssetConnector._compute_fingerprint(ep_isolated)
-
-    def test_os_change_changes_fingerprint(self):
-        ep_a = COMPUTER_ENDPOINT.model_copy(update={"os": SophosOS(platform="windows", name="Windows 10")})
-        ep_b = COMPUTER_ENDPOINT.model_copy(update={"os": SophosOS(platform="windows", name="Windows 11")})
-        assert SophosDeviceAssetConnector._compute_fingerprint(
-            ep_a
-        ) != SophosDeviceAssetConnector._compute_fingerprint(ep_b)
-
-    def test_none_optional_fields_do_not_crash(self):
-        """Fingerprint must work cleanly when optional fields are absent."""
-        ep = SophosEndpoint(id="x", hostname="h")
-        fp = SophosDeviceAssetConnector._compute_fingerprint(ep)
-        assert isinstance(fp, str) and len(fp) == 64  # SHA-256 hex = 64 chars
-
-    def test_returns_sha256_hex_string(self):
-        fp = SophosDeviceAssetConnector._compute_fingerprint(COMPUTER_ENDPOINT)
-        assert len(fp) == 64
+    @pytest.mark.parametrize(
+        "endpoint",
+        [
+            pytest.param(COMPUTER_ENDPOINT, id="full_endpoint"),
+            # Fingerprint must work cleanly when optional fields are absent.
+            pytest.param(SophosEndpoint(id="x", hostname="h"), id="none_optional_fields"),
+        ],
+    )
+    def test_returns_sha256_hex_string(self, endpoint):
+        fp = SophosDeviceAssetConnector._compute_fingerprint(endpoint)
+        assert isinstance(fp, str)
+        assert len(fp) == 64  # SHA-256 hex = 64 chars
         assert all(c in "0123456789abcdef" for c in fp)
 
 
 class TestGetGroups:
     def test_valid_group_returned(self, connector):
-        from sophos_module.asset_connector.model import SophosGroup
-
-        ep = COMPUTER_ENDPOINT.model_copy(update={"group": SophosGroup(id="grp-1", name="Finance")})
+        ep = _computer_with(group=SophosGroup(id="grp-1", name="Finance"))
         groups = connector._get_groups(ep)
         assert groups is not None
         assert len(groups) == 1
         assert groups[0].uid == "grp-1"
         assert groups[0].name == "Finance"
 
-    def test_missing_group_returns_none(self, connector):
-        ep = COMPUTER_ENDPOINT.model_copy(update={"group": None})
-        assert connector._get_groups(ep) is None
-
-    def test_group_without_name_returns_none(self, connector):
-        from sophos_module.asset_connector.model import SophosGroup
-
-        ep = COMPUTER_ENDPOINT.model_copy(update={"group": SophosGroup(id="g1", name=None)})
-        assert connector._get_groups(ep) is None
+    @pytest.mark.parametrize(
+        "group",
+        [
+            pytest.param(None, id="missing_group"),
+            pytest.param(SophosGroup(id="g1", name=None), id="group_without_name"),
+        ],
+    )
+    def test_no_usable_group_returns_none(self, connector, group):
+        assert connector._get_groups(_computer_with(group=group)) is None
 
     def test_group_reflected_in_mapped_model(self, connector):
         """Group must appear in the OCSF model device.groups field."""
-        from sophos_module.asset_connector.model import SophosGroup
-
-        ep = COMPUTER_ENDPOINT.model_copy(update={"group": SophosGroup(id="grp-42", name="IT-Ops")})
+        ep = _computer_with(group=SophosGroup(id="grp-42", name="IT-Ops"))
         result = connector.map_device_fields(ep)
         assert result is not None
         assert result.device.groups is not None
@@ -811,46 +817,57 @@ class TestGetGroups:
 
 
 class TestIsTrusted:
-    def test_good_health_and_tamper_enabled_is_trusted(self):
-        ep = SophosEndpoint(
-            id="x",
-            hostname="h",
-            health=SophosHealth(overall="good"),
-            tamperProtectionEnabled=True,
-            isolation=SophosIsolation(status="notIsolated"),
-        )
-        assert SophosDeviceAssetConnector._is_trusted(ep) is True
-
-    def test_isolated_is_not_trusted(self):
-        ep = SophosEndpoint(
-            id="x",
-            hostname="h",
-            health=SophosHealth(overall="good"),
-            tamperProtectionEnabled=True,
-            isolation=SophosIsolation(status="isolated"),
-        )
-        assert SophosDeviceAssetConnector._is_trusted(ep) is False
-
-    def test_bad_health_is_not_trusted(self):
-        ep = SophosEndpoint(id="x", hostname="h", health=SophosHealth(overall="bad"))
-        assert SophosDeviceAssetConnector._is_trusted(ep) is False
-
-    def test_suspicious_health_is_not_trusted(self):
-        ep = SophosEndpoint(id="x", hostname="h", health=SophosHealth(overall="suspicious"))
-        assert SophosDeviceAssetConnector._is_trusted(ep) is False
-
-    def test_unknown_state_returns_none(self):
-        ep = SophosEndpoint(id="x", hostname="h", health=SophosHealth(overall="unknown"))
-        assert SophosDeviceAssetConnector._is_trusted(ep) is None
-
-    def test_good_health_but_tamper_disabled_returns_none(self):
-        ep = SophosEndpoint(
-            id="x",
-            hostname="h",
-            health=SophosHealth(overall="good"),
-            tamperProtectionEnabled=False,
-        )
-        assert SophosDeviceAssetConnector._is_trusted(ep) is None
+    @pytest.mark.parametrize(
+        "endpoint, expected",
+        [
+            pytest.param(
+                SophosEndpoint(
+                    id="x",
+                    hostname="h",
+                    health=SophosHealth(overall="good"),
+                    tamperProtectionEnabled=True,
+                    isolation=SophosIsolation(status="notIsolated"),
+                ),
+                True,
+                id="good_health_and_tamper_enabled_is_trusted",
+            ),
+            pytest.param(
+                SophosEndpoint(
+                    id="x",
+                    hostname="h",
+                    health=SophosHealth(overall="good"),
+                    tamperProtectionEnabled=True,
+                    isolation=SophosIsolation(status="isolated"),
+                ),
+                False,
+                id="isolated_is_not_trusted",
+            ),
+            pytest.param(
+                SophosEndpoint(id="x", hostname="h", health=SophosHealth(overall="bad")),
+                False,
+                id="bad_health_is_not_trusted",
+            ),
+            pytest.param(
+                SophosEndpoint(id="x", hostname="h", health=SophosHealth(overall="suspicious")),
+                False,
+                id="suspicious_health_is_not_trusted",
+            ),
+            pytest.param(
+                SophosEndpoint(id="x", hostname="h", health=SophosHealth(overall="unknown")),
+                None,
+                id="unknown_state_returns_none",
+            ),
+            pytest.param(
+                SophosEndpoint(
+                    id="x", hostname="h", health=SophosHealth(overall="good"), tamperProtectionEnabled=False
+                ),
+                None,
+                id="good_health_but_tamper_disabled_returns_none",
+            ),
+        ],
+    )
+    def test_is_trusted(self, endpoint, expected):
+        assert SophosDeviceAssetConnector._is_trusted(endpoint) is expected
 
 
 class TestIterEndpointsWithCheckpoint:
@@ -895,25 +912,22 @@ class TestGetAssetsDeduplication:
         assets_run2 = list(connector.get_assets())
         assert len(assets_run2) == 0
 
-    def test_heartbeat_only_update_is_suppressed(self, connector):
-        """A lastSeenAt-only change must NOT trigger a re-send."""
+    @pytest.mark.parametrize(
+        "update, expected_count",
+        [
+            # A lastSeenAt-only change must NOT trigger a re-send.
+            pytest.param({"lastSeenAt": "2026-06-01T10:00:00.000Z"}, 0, id="heartbeat_only_update_is_suppressed"),
+            # A change in a meaningful field (e.g. health) must trigger a re-send.
+            pytest.param({"health": {"overall": "good"}}, 1, id="real_inventory_change_is_resent"),
+        ],
+    )
+    def test_resend_depends_on_inventory_change(self, connector, update, expected_count):
         _make_response(connector, [COMPUTER_ENDPOINT_DICT])
         list(connector.get_assets())
 
-        heartbeat = {**COMPUTER_ENDPOINT_DICT, "lastSeenAt": "2026-06-01T10:00:00.000Z"}
-        _make_response(connector, [heartbeat])
+        _make_response(connector, [{**COMPUTER_ENDPOINT_DICT, **update}])
         assets_run2 = list(connector.get_assets())
-        assert len(assets_run2) == 0
-
-    def test_real_inventory_change_is_resent(self, connector):
-        """A change in a meaningful field (e.g. health) must trigger a re-send."""
-        _make_response(connector, [COMPUTER_ENDPOINT_DICT])
-        list(connector.get_assets())
-
-        updated = {**COMPUTER_ENDPOINT_DICT, "health": {"overall": "good"}}
-        _make_response(connector, [updated])
-        assets_run2 = list(connector.get_assets())
-        assert len(assets_run2) == 1
+        assert len(assets_run2) == expected_count
 
     def test_new_device_sent_on_second_run(self, connector):
         """A brand-new device (not in cache) must be yielded on the second run."""
@@ -1045,12 +1059,10 @@ class TestGetAssetsDeduplication:
 
 
 class TestGetMappedFields:
-    def test_returns_dict(self, connector):
+    def test_returns_non_empty_dict(self, connector):
         result = connector.get_mapped_fields()
         assert isinstance(result, dict)
-
-    def test_is_non_empty(self, connector):
-        assert len(connector.get_mapped_fields()) > 0
+        assert len(result) > 0
 
     def test_all_keys_and_values_are_strings(self, connector):
         mapping = connector.get_mapped_fields()
@@ -1058,8 +1070,16 @@ class TestGetMappedFields:
             assert isinstance(k, str), f"Key {k!r} is not a string"
             assert isinstance(v, str), f"Value {v!r} is not a string"
 
-    def test_contains_hostname_mapping(self, connector):
-        assert "hostname" in connector.get_mapped_fields()
+    @pytest.mark.parametrize(
+        "key",
+        [
+            pytest.param("hostname", id="hostname"),
+            pytest.param("lastSeenAt", id="last_seen_at"),
+            pytest.param("registeredAt", id="registered_at"),
+        ],
+    )
+    def test_contains_mapping(self, connector, key):
+        assert key in connector.get_mapped_fields()
 
     def test_contains_os_mapping(self, connector):
         mapping = connector.get_mapped_fields()
@@ -1068,11 +1088,6 @@ class TestGetMappedFields:
     def test_contains_ip_mapping(self, connector):
         mapping = connector.get_mapped_fields()
         assert any("ipv4" in k.lower() or "ipv6" in k.lower() for k in mapping)
-
-    def test_contains_timestamp_mappings(self, connector):
-        mapping = connector.get_mapped_fields()
-        assert "lastSeenAt" in mapping
-        assert "registeredAt" in mapping
 
     def test_deterministic_across_calls(self, connector):
         assert connector.get_mapped_fields() == connector.get_mapped_fields()
@@ -1086,33 +1101,37 @@ class TestGetMappedFields:
 
 
 class TestResetCheckpoint:
-    def test_clears_last_seen_cursor_from_context(self, connector):
+    @pytest.mark.parametrize(
+        "key, value",
+        [
+            pytest.param("last_seen_cursor", "2026-01-01T00:00:00.000Z", id="last_seen_cursor"),
+            pytest.param(
+                "sent_ids", {"some-id": {"fingerprint": "fp", "cached_at": "2026-01-01T00:00:00Z"}}, id="sent_ids"
+            ),
+        ],
+    )
+    def test_clears_key_from_context(self, connector, key, value):
         with connector.context as cache:
-            cache["last_seen_cursor"] = "2026-01-01T00:00:00.000Z"
+            cache[key] = value
 
         connector.reset_checkpoint()
 
         with connector.context as cache:
-            assert cache.get("last_seen_cursor") is None
+            assert cache.get(key) is None
 
-    def test_clears_sent_ids_from_context(self, connector):
-        with connector.context as cache:
-            cache["sent_ids"] = {"some-id": {"fingerprint": "fp", "cached_at": "2026-01-01T00:00:00Z"}}
-
+    @pytest.mark.parametrize(
+        "attribute, value, expected",
+        [
+            pytest.param("_latest_time", "2026-05-01T00:00:00.000Z", None, id="latest_time"),
+            pytest.param(
+                "_sent_ids", {"id-1": {"fingerprint": "fp", "cached_at": "2026-01-01T00:00:00Z"}}, {}, id="sent_ids"
+            ),
+        ],
+    )
+    def test_resets_state_in_memory(self, connector, attribute, value, expected):
+        setattr(connector, attribute, value)
         connector.reset_checkpoint()
-
-        with connector.context as cache:
-            assert cache.get("sent_ids") is None
-
-    def test_resets_latest_time_in_memory(self, connector):
-        connector._latest_time = "2026-05-01T00:00:00.000Z"
-        connector.reset_checkpoint()
-        assert connector._latest_time is None
-
-    def test_resets_sent_ids_in_memory(self, connector):
-        connector._sent_ids = {"id-1": {"fingerprint": "fp", "cached_at": "2026-01-01T00:00:00Z"}}
-        connector.reset_checkpoint()
-        assert connector._sent_ids == {}
+        assert getattr(connector, attribute) == expected
 
     def test_logs_info_message(self, connector):
         connector.reset_checkpoint()
@@ -1151,3 +1170,63 @@ class TestResetCheckpoint:
 
         called_params = connector.client.list_endpoints.call_args[0][0]
         assert "lastSeenAfter" not in called_params
+
+
+class TestCacheEdgeCases:
+    @pytest.mark.parametrize("raw", [["id-1"], "corrupted", 42], ids=["list", "string", "int"])
+    def test_load_ignores_a_corrupted_cache(self, connector, raw):
+        with connector.context as cache:
+            cache["sent_ids"] = raw
+        connector._load_sent_ids()
+        assert connector._sent_ids == {}
+
+    def test_save_trims_to_the_most_recent_entries(self, connector):
+        connector.MAX_CACHE_SIZE = 2
+        now = datetime.now(tz=UTC)
+        connector._sent_ids = {
+            f"id-{age}": {"fingerprint": "fp", "cached_at": (now - timedelta(hours=age)).isoformat()}
+            for age in range(4)
+        }
+
+        connector._save_sent_ids()
+
+        with connector.context as cache:
+            assert set(cache["sent_ids"]) == {"id-0", "id-1"}
+        assert set(connector._sent_ids) == {"id-0", "id-1"}
+
+
+class TestGetAssetsEdgeCases:
+    def test_fingerprint_serialization_error(self, monkeypatch):
+        def fail(*args, **kwargs):
+            raise TypeError("not serializable")
+
+        monkeypatch.setattr("sophos_module.asset_connector.device_assets.json.dumps", fail)
+
+        with pytest.raises(TypeError, match=f"Failed to serialize fingerprint for endpoint '{COMPUTER_ENDPOINT.id}'"):
+            SophosDeviceAssetConnector._compute_fingerprint(COMPUTER_ENDPOINT)
+
+    @pytest.mark.parametrize(
+        "patched, value",
+        [
+            pytest.param("_compute_fingerprint", TypeError("not serializable"), id="fingerprint-error"),
+            pytest.param("map_device_fields", None, id="unmappable-endpoint"),
+        ],
+    )
+    def test_endpoint_is_skipped(self, connector, patched, value):
+        _make_response(connector, [COMPUTER_ENDPOINT_DICT, SERVER_ENDPOINT_DICT])
+        original = getattr(connector, patched)
+        target_id = COMPUTER_ENDPOINT_DICT["id"]
+
+        def patched_method(endpoint):
+            if endpoint.id == target_id:
+                if isinstance(value, Exception):
+                    raise value
+                return value
+            return original(endpoint)
+
+        setattr(connector, patched, patched_method)
+
+        assets = list(connector.get_assets())
+
+        assert [asset.device.uid for asset in assets] == [SERVER_ENDPOINT_DICT["id"]]
+        assert target_id not in connector._sent_ids

@@ -54,6 +54,8 @@ class ActionSophosEDRIsolateEndpoint(SophosEDRAction):
                 result.update(current_status)
                 return result
 
+            raise
+
     def run(self, arguments: dict[str, Any]) -> Any:
         endpoint_id = arguments["endpoint_id"]
         comment = arguments.get("comment")

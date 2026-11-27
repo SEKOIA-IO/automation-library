@@ -198,7 +198,7 @@ class SophosFusionDetectionsTrigger(SophosConnector):
         self.cursor.offset = end
         self._forget_seen_before(start)
 
-    def run(self) -> None:  # pragma: no cover
+    def run(self) -> None:
         self.log(message="Sophos Fusion detections trigger has started", level="info")
 
         try:

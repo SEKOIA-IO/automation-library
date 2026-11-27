@@ -54,10 +54,7 @@ class SophosEDRAction(Action, ABC):
 
         response = func(url=url, json=data)
 
-        if response.ok:
-            return response.json()
-
-        else:
+        if not response.ok:
             raw = response.json()
             logger.error(
                 f"Error {response.status_code}",
@@ -71,4 +68,4 @@ class SophosEDRAction(Action, ABC):
             )
             response.raise_for_status()
 
-        return {}
+        return response.json()

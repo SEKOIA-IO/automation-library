@@ -149,7 +149,7 @@ class SophosXDRQueryTrigger(SophosConnector):
             level="warning",
         )
 
-    def run(self) -> None:  # pragma: no cover
+    def run(self) -> None:
         self.log(message="Sophos Events Trigger has started", level="info")
 
         try:
@@ -309,9 +309,6 @@ class SophosXDRQueryTrigger(SophosConnector):
 
 
 class SophosXDRIOCQuery(SophosXDRQueryTrigger):
-    def __init__(self, *args: Any, **kwargs: Any | None) -> None:
-        super().__init__(*args, **kwargs)
-
     @property
     def query(self) -> dict[str, Any]:
         return {

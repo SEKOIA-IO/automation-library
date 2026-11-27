@@ -18,7 +18,6 @@ dependencies = [
 dev = [
     "pytest",
     "pytest-cov",
-    "pytest-xdist",
     "requests-mock",
 ]
 lint = [
@@ -69,4 +68,4 @@ filterwarnings = [
   "ignore::DeprecationWarning",
   "ignore:.*unclosed.*:ResourceWarning",
 ]
-addopts = "  --strict-markers\n  --tb=short\n  --cov=sophos_module\n  --cov-branch\n  --cache-clear\n  --cov-report=html\n  --cov-report=term-missing:skip-covered\n  --cov-fail-under=90\n  --numprocesses=auto\n"
+addopts = "  --strict-markers\n  --tb=short\n  --cov=sophos_module\n  --cov-branch\n  --cache-clear\n  --cov-report=html\n  --cov-report=term-missing:skip-covered\n  --cov-fail-under=100\n"

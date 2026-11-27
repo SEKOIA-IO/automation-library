@@ -20,11 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Raise the minimum supported Python version to `3.14`
 - Migrate project dependency management from Poetry to uv (`pyproject.toml` PEP 621 + `uv.lock`), with `mise` tasks and `ruff` instead of `black`, `isort` and `autoflake`
 - Upgrade `sekoia-automation-sdk` to `1.28.1` and regenerate `uv.lock` with the latest versions of all dependencies
-- Move the actions to `sophos_module/actions/` and the triggers to `sophos_module/triggers/`, and lay out `tests/` like `sophos_module/` (one `test_<file>.py` per module file)
+- Move the actions to `sophos_module/actions/` and the triggers to `sophos_module/triggers/`, and lay out `tests/` like `sophos_module/` (one `test_<file>.py` per module file), with 100% test coverage, parametrized tests and no real waits (`time.sleep` mocked)
 - Query IoC from data lake: log the details of failed queries (HTTP status and error payload of the query post, error fields of a failed execution), with a hint about the `Service Principal Forensics` role on `403`
 
 ### Fixed
 
+- Isolate and deisolate endpoint actions: raise the HTTP errors other than `400` instead of silently returning nothing
 - Authentication: replace the deprecated `datetime.utcnow()` with a timezone-aware date (deprecation warnings on Python 3.14)
 - Events and IoC triggers: compute the events lag from timestamps with or without fractional seconds and time offset, instead of failing on any format other than `%Y-%m-%dT%H:%M:%S.%fZ`
 

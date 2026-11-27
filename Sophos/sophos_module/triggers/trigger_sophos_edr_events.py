@@ -68,7 +68,7 @@ class SophosEDREventsTrigger(SophosConnector):
     def client(self) -> SophosApiClient:
         return SophosApiClient(auth=self.authentication)
 
-    def run(self) -> None:  # pragma: no cover
+    def run(self) -> None:
         self.log(message="Sophos Events Trigger has started", level="info")
 
         try:

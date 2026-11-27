@@ -5,7 +5,8 @@ import pytest
 import requests_mock
 
 from sophos_module.base import SophosModule
-from sophos_module.triggers.trigger_sophos_xdr_query import SophosXDRIOCQuery
+from sophos_module.client.exceptions import SophosApiAuthenticationError
+from sophos_module.triggers.trigger_sophos_xdr_query import SophosXDRIOCQuery, SophosXDRQueryTrigger
 
 
 @pytest.fixture
@@ -368,12 +369,11 @@ def test_post_query_without_query_id(trigger, authorization_message, whoami_mess
 
 
 def test_post_query_execution_failed_logs_details(
-    trigger, authorization_message, whoami_message, query_run_message, query_status_message, monkeypatch
+    trigger, authorization_message, whoami_message, query_run_message, query_status_message
 ):
     host = "https://api-eu01.central.sophos.com"
     query_id = query_run_message["id"]
     failed_status = {**query_status_message, "result": "failed", "error": {"code": "QUERY_FAILED"}}
-    monkeypatch.setattr("sophos_module.triggers.trigger_sophos_xdr_query.time.sleep", lambda _: None)
 
     with requests_mock.Mocker() as mock:
         _mock_authentication(mock, trigger, authorization_message, whoami_message)
@@ -402,48 +402,43 @@ def _mock_tenant_markers(mock, trigger, authorization_message, whoami_message, *
     mock.post("https://api.taegis.sophos.com/graphql", **kwargs)
 
 
-def test_check_fusion_upgrade_on_upgraded_tenant(trigger, authorization_message, whoami_message):
+@pytest.mark.parametrize(
+    "markers, expected, expected_levels",
+    [
+        pytest.param(
+            {"xdrOwnership": "securityOperations", "hydrateTo": "taegis"}, True, ["info", "error"], id="fusion"
+        ),
+        pytest.param({"xdrOwnership": "securityOperations", "hydrateTo": None}, True, ["info", "error"], id="sec-ops"),
+        pytest.param({"xdrOwnership": "central", "hydrateTo": "taegis"}, True, ["info", "error"], id="taegis"),
+        pytest.param({"xdrOwnership": "central", "hydrateTo": None}, False, ["info"], id="legacy"),
+        pytest.param(None, False, ["info"], id="no-central-tenant"),
+    ],
+)
+def test_check_fusion_upgrade(trigger, authorization_message, whoami_message, markers, expected, expected_levels):
     with requests_mock.Mocker() as mock:
         _mock_tenant_markers(
             mock,
             trigger,
             authorization_message,
             whoami_message,
-            json={
-                "data": {
-                    "tenant": {
-                        "id": "427579",
-                        "centralTenant": {"xdrOwnership": "securityOperations", "hydrateTo": "taegis"},
-                    }
-                }
-            },
+            json={"data": {"tenant": {"id": "427579", "centralTenant": markers}}},
         )
-        assert trigger.check_fusion_upgrade() is True
+        assert trigger.check_fusion_upgrade() is expected
         assert mock.last_request.json()["variables"] == {"id": whoami_message["id"]}
 
-    levels = [call.kwargs["level"] for call in trigger.log.call_args_list]
-    assert "error" in levels
-
-
-def test_check_fusion_upgrade_on_legacy_tenant(trigger, authorization_message, whoami_message):
-    with requests_mock.Mocker() as mock:
-        _mock_tenant_markers(
-            mock,
-            trigger,
-            authorization_message,
-            whoami_message,
-            json={"data": {"tenant": {"id": "1", "centralTenant": {"xdrOwnership": "central", "hydrateTo": None}}}},
-        )
-        assert trigger.check_fusion_upgrade() is False
-
-    assert all(call.kwargs["level"] == "info" for call in trigger.log.call_args_list)
+    assert trigger.fusion_upgraded is expected
+    assert [call.kwargs["level"] for call in trigger.log.call_args_list] == expected_levels
 
 
 @pytest.mark.parametrize(
     "response",
     [
-        {"status_code": 403, "json": {"message": "Forbidden"}},
-        {"json": {"data": None, "errors": [{"message": "not found", "extensions": {"code": "NOT_FOUND"}}]}},
+        pytest.param({"status_code": 403, "json": {"message": "Forbidden"}}, id="http-error"),
+        pytest.param(
+            {"json": {"data": None, "errors": [{"message": "not found", "extensions": {"code": "NOT_FOUND"}}]}},
+            id="graphql-error",
+        ),
+        pytest.param({"json": {"data": {"tenant": None}}}, id="no-tenant"),
     ],
 )
 def test_check_fusion_upgrade_failure_is_ignored(trigger, authorization_message, whoami_message, response):
@@ -494,3 +489,128 @@ def test_check_fusion_upgrade_daily(trigger):
     trigger.check_fusion_upgrade_daily()
 
     assert trigger.check_fusion_upgrade.call_count == 2
+
+
+@pytest.mark.parametrize(
+    "age, expected_age",
+    [
+        pytest.param(timedelta(days=2), timedelta(days=2), id="recent"),
+        pytest.param(timedelta(days=45), timedelta(days=30), id="capped-to-30-days"),
+    ],
+)
+def test_from_date_is_capped(trigger, age, expected_age):
+    trigger.from_date = datetime.now(UTC) - age
+
+    assert abs((datetime.now(UTC) - trigger.from_date) - expected_age) < timedelta(seconds=5)
+
+
+def test_base_query_is_abstract(trigger):
+    with pytest.raises(NotImplementedError):
+        SophosXDRQueryTrigger.query.fget(trigger)
+
+
+@pytest.mark.parametrize("chunk_size, expected", [(1, 1000), (1000, 1000), (5000, 5000)])
+def test_pagination_limit(trigger, chunk_size, expected):
+    trigger.configuration.chunk_size = chunk_size
+    assert trigger.pagination_limit == expected
+
+
+@pytest.mark.parametrize(
+    "status_code, expected_hint",
+    [
+        (
+            403,
+            ". Check that the API credential has the 'Service Principal Forensics' role"
+            " and that the XDR licence of the tenant is valid",
+        ),
+        (400, ""),
+        (500, ""),
+    ],
+)
+def test_query_error_hint(status_code, expected_hint):
+    assert SophosXDRQueryTrigger._query_error_hint(status_code) == expected_hint
+
+
+def test_post_query_retries_status_after_error(
+    trigger, authorization_message, whoami_message, query_run_message, query_status_message, no_sleep
+):
+    host = "https://api-eu01.central.sophos.com"
+    query_id = query_run_message["id"]
+
+    with requests_mock.Mocker() as mock:
+        _mock_authentication(mock, trigger, authorization_message, whoami_message)
+        mock.post(f"{host}/xdr-query/v1/queries/runs", json=query_run_message)
+        mock.get(
+            f"{host}/xdr-query/v1/queries/runs/{query_id}",
+            [
+                {"status_code": 404, "json": {"status": "pending"}},
+                {"json": {**query_status_message, "status": "pending"}},
+                {"json": query_status_message},
+            ],
+        )
+
+        assert trigger.post_query(trigger.query) == ("succeeded", query_id)
+
+    assert no_sleep == [2, 2, 2]
+    errors = [call.kwargs["message"] for call in trigger.log.call_args_list if call.kwargs.get("level") == "error"]
+    assert errors == [errors[0]] and "Failed to get the query status. Status code: 404" in errors[0]
+
+
+def test_getting_results_query_failed(trigger):
+    trigger.post_query = Mock(return_value=("failed", None))
+    trigger.warn_if_stalled = Mock()
+
+    trigger.getting_results(1000)
+
+    trigger.push_events_to_intakes.assert_not_called()
+    trigger.warn_if_stalled.assert_not_called()
+    assert "The query failed" in trigger.log.call_args_list[-1].kwargs["message"]
+
+
+def test_getting_results_without_items(trigger, authorization_message, whoami_message):
+    trigger.post_query = Mock(return_value=("succeeded", "query-id"))
+    trigger.warn_if_stalled = Mock()
+    checkpoint = trigger.cursor.offset
+
+    with requests_mock.Mocker() as mock:
+        _mock_authentication(mock, trigger, authorization_message, whoami_message)
+        mock.get(
+            "https://api-eu01.central.sophos.com/xdr-query/v1/queries/runs/query-id/results",
+            json={"items": [], "pages": {}},
+        )
+        trigger.getting_results(1000)
+
+    trigger.push_events_to_intakes.assert_not_called()
+    trigger.warn_if_stalled.assert_called_once()
+    assert trigger.cursor.offset == checkpoint
+
+
+@pytest.mark.parametrize("frequency, expected_sleeps", [(60, [60]), (0, [])])
+def test_run(trigger, run_one_cycle, recoverable_error, no_sleep, frequency, expected_sleeps):
+    trigger.check_fusion_upgrade_daily = Mock()
+
+    step = run_one_cycle(trigger, "getting_results", recoverable_error, frequency)
+
+    step.assert_called_once_with(trigger.pagination_limit)
+    trigger.check_fusion_upgrade_daily.assert_called_once()
+    assert no_sleep == expected_sleeps
+    assert trigger.log_exception.call_count == (recoverable_error is not None)
+
+
+def test_run_raises_unexpected_errors(trigger, run_one_cycle):
+    trigger.check_fusion_upgrade_daily = Mock()
+
+    with pytest.raises(ValueError):
+        run_one_cycle(trigger, "getting_results", ValueError("boom"))
+
+    trigger.log_exception.assert_called_once()
+    assert trigger.log.call_args_list[-1].kwargs["message"] == "Sophos Events Trigger has stopped"
+
+
+def test_run_stops_on_authentication_error(trigger):
+    trigger.authentication = Mock()
+    trigger.authentication.get_credentials.side_effect = SophosApiAuthenticationError("bad credentials")
+
+    trigger.run()
+
+    assert [call.kwargs.get("level") for call in trigger.log.call_args_list] == ["info", "critical", "info"]

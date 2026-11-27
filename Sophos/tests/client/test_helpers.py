@@ -15,12 +15,6 @@ def http_error(status_code: int | None) -> requests.HTTPError:
     return requests.HTTPError(response=response)
 
 
-@pytest.fixture(autouse=True)
-def no_wait(monkeypatch):
-    # tenacity waits between attempts: skip the sleeps
-    monkeypatch.setattr("tenacity.nap.time.sleep", lambda _: None)
-
-
 @pytest.mark.parametrize(
     "error",
     [

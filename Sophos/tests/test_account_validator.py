@@ -2,13 +2,14 @@
 Unit tests for SophosAccountValidator (sophos_module/account_validator.py).
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 import requests
 
 from sophos_module.account_validator import SophosAccountValidator
 from sophos_module.base import SophosModule
+from sophos_module.client.auth import SophosApiAuthentication
 from sophos_module.client.exceptions import SophosApiAuthenticationError
 
 AUTH_URL = "https://id.sophos.com/api/v2/oauth2/token"
@@ -17,119 +18,105 @@ API_HOST = "https://api.central.sophos.com"
 
 @pytest.fixture
 def validator(symphony_storage):
-    module = SophosModule()
-    v = SophosAccountValidator(module=module, data_path=symphony_storage)
-    v.module.configuration = {
+    validator = SophosAccountValidator(module=SophosModule(), data_path=symphony_storage)
+    validator.module.configuration = {
         "oauth2_authorization_url": AUTH_URL,
         "api_host": API_HOST,
         "client_id": "test-client-id",
         "client_secret": "test-client-secret",
     }
-    v.log = MagicMock()
-    v.log_exception = MagicMock()
-    v.error = MagicMock()
-    return v
+    validator.log = MagicMock()
+    validator.log_exception = MagicMock()
+    validator.error = MagicMock()
+    # cached_property: replace the authentication by a mock
+    validator.auth_client = MagicMock()
+    return validator
 
 
-def _make_credentials(access_token: str = "valid_token", tenancy_type: str = "tenant", tenancy_id: str = "t-123"):
-    creds = MagicMock()
-    creds.access_token = access_token
-    creds.tenancy_type = tenancy_type
-    creds.tenancy_id = tenancy_id
-    return creds
+def make_credentials(access_token: str | None = "valid_token", tenancy_type="tenant", tenancy_id="t-123"):
+    credentials = MagicMock()
+    credentials.access_token = access_token
+    credentials.tenancy_type = tenancy_type
+    credentials.tenancy_id = tenancy_id
+    return credentials
 
 
-class TestValidateSuccess:
-    def test_returns_true_on_valid_credentials(self, validator):
-        mock_auth = MagicMock()
-        mock_auth.get_credentials.return_value = _make_credentials()
+@pytest.mark.parametrize(
+    "tenancy_type, tenancy_id",
+    [("tenant", "t-123"), ("organization", "org-99"), ("partner", "p-1")],
+)
+def test_validate_success(validator, tenancy_type, tenancy_id):
+    validator.auth_client.get_credentials.return_value = make_credentials(
+        tenancy_type=tenancy_type, tenancy_id=tenancy_id
+    )
 
-        with patch.object(validator, "auth_client", mock_auth):
-            result = validator.validate()
+    assert validator.validate() is True
 
-        assert result is True
-        validator.log.assert_called()
-
-    def test_logs_tenancy_info(self, validator):
-        mock_auth = MagicMock()
-        mock_auth.get_credentials.return_value = _make_credentials(tenancy_type="organization", tenancy_id="org-99")
-
-        with patch.object(validator, "auth_client", mock_auth):
-            validator.validate()
-
-        log_calls = " ".join(str(c) for c in validator.log.call_args_list)
-        assert "org-99" in log_calls or "organization" in log_calls
+    validator.error.assert_not_called()
+    assert validator.log.call_args_list[-1].args[0] == (
+        f"Credentials validated - tenancy_type={tenancy_type}, tenancy_id={tenancy_id}"
+    )
 
 
-class TestValidateNoToken:
-    def test_returns_false_when_no_access_token(self, validator):
-        creds = _make_credentials(access_token=None)
-        mock_auth = MagicMock()
-        mock_auth.get_credentials.return_value = creds
+@pytest.mark.parametrize(
+    "credentials",
+    [pytest.param(None, id="no-credentials"), pytest.param(make_credentials(access_token=None), id="no-token")],
+)
+def test_validate_without_access_token(validator, credentials):
+    validator.auth_client.get_credentials.return_value = credentials
 
-        with patch.object(validator, "auth_client", mock_auth):
-            result = validator.validate()
+    assert validator.validate() is False
 
-        assert result is False
-        validator.error.assert_called()
-
-    def test_returns_false_when_credentials_none(self, validator):
-        mock_auth = MagicMock()
-        mock_auth.get_credentials.return_value = None
-
-        with patch.object(validator, "auth_client", mock_auth):
-            result = validator.validate()
-
-        assert result is False
+    validator.error.assert_called_once_with("Failed to validate Sophos credentials: no access token returned")
 
 
-class TestValidateExceptions:
-    def test_returns_false_on_authentication_error(self, validator):
-        mock_auth = MagicMock()
-        mock_auth.get_credentials.side_effect = SophosApiAuthenticationError("Bad credentials")
+@pytest.mark.parametrize(
+    "error, expected_message",
+    [
+        pytest.param(
+            SophosApiAuthenticationError("Bad credentials"),
+            "Failed to validate Sophos credentials: Bad credentials",
+            id="authentication-error",
+        ),
+        pytest.param(
+            requests.HTTPError("503 Service Unavailable"),
+            "Failed to validate Sophos credentials due to HTTP error: 503 Service Unavailable",
+            id="http-error",
+        ),
+        pytest.param(
+            requests.ConnectionError("Network unreachable"),
+            "Failed to validate Sophos credentials due to network error: Network unreachable",
+            id="network-error",
+        ),
+        pytest.param(
+            RuntimeError("Unexpected"),
+            "Failed to validate Sophos credentials due to an unexpected error",
+            id="unexpected-error",
+        ),
+    ],
+)
+def test_validate_errors(validator, error, expected_message):
+    validator.auth_client.get_credentials.side_effect = error
 
-        with patch.object(validator, "auth_client", mock_auth):
-            result = validator.validate()
+    assert validator.validate() is False
 
-        assert result is False
-        validator.error.assert_called()
-
-    def test_returns_false_on_http_error(self, validator):
-        mock_auth = MagicMock()
-        mock_auth.get_credentials.side_effect = requests.HTTPError("503 Service Unavailable")
-
-        with patch.object(validator, "auth_client", mock_auth):
-            result = validator.validate()
-
-        assert result is False
-        validator.error.assert_called()
-
-    def test_returns_false_on_request_exception(self, validator):
-        mock_auth = MagicMock()
-        mock_auth.get_credentials.side_effect = requests.ConnectionError("Network unreachable")
-
-        with patch.object(validator, "auth_client", mock_auth):
-            result = validator.validate()
-
-        assert result is False
-        validator.error.assert_called()
-
-    def test_returns_false_on_unexpected_exception(self, validator):
-        mock_auth = MagicMock()
-        mock_auth.get_credentials.side_effect = RuntimeError("Unexpected")
-
-        with patch.object(validator, "auth_client", mock_auth):
-            result = validator.validate()
-
-        assert result is False
-        validator.error.assert_called()
-        validator.log_exception.assert_called()
+    validator.error.assert_called_once_with(expected_message)
+    assert validator.log_exception.call_count == isinstance(error, RuntimeError)
 
 
-class TestBuildAuth:
-    def test_build_auth_uses_configuration(self, validator):
-        """_build_auth should forward module configuration fields."""
-        from sophos_module.client.auth import SophosApiAuthentication
+def test_auth_client_uses_the_module_configuration(symphony_storage):
+    validator = SophosAccountValidator(module=SophosModule(), data_path=symphony_storage)
+    validator.module.configuration = {
+        "oauth2_authorization_url": AUTH_URL,
+        "api_host": API_HOST,
+        "client_id": "test-client-id",
+        "client_secret": "test-client-secret",
+    }
 
-        auth = validator._build_auth()
-        assert isinstance(auth, SophosApiAuthentication)
+    auth = validator.auth_client
+
+    assert isinstance(auth, SophosApiAuthentication)
+    assert auth is validator.auth_client
+    assert auth._SophosApiAuthentication__api_host == API_HOST
+    assert auth._SophosApiAuthentication__authorization_url == AUTH_URL
+    assert auth._SophosApiAuthentication__client_id == "test-client-id"

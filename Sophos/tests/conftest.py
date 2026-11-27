@@ -15,3 +15,11 @@ def symphony_storage():
 
     rmtree(constants.DATA_STORAGE)
     constants.DATA_STORAGE = original_storage
+
+
+@pytest.fixture(autouse=True)
+def no_sleep(monkeypatch):
+    """Never really wait in the unit tests: the triggers, tenacity and urllib3 retries all call time.sleep."""
+    sleeps: list[float] = []
+    monkeypatch.setattr("time.sleep", sleeps.append)
+    return sleeps

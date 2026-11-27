@@ -459,8 +459,14 @@ class SophosDeviceAssetConnector(AssetConnector):
 
         try:
             for endpoint in self._iter_endpoints():
+                # map first: endpoints without id or hostname are skipped
+                mapped = self.map_device_fields(endpoint)
+                if mapped is None:
+                    skipped += 1
+                    continue
+
                 try:
-                    current_fp = self._compute_fingerprint(endpoint) if endpoint.id else None
+                    current_fp = self._compute_fingerprint(endpoint)
                 except TypeError as exc:
                     self.log(
                         f"Skipping endpoint '{endpoint.id}': fingerprint serialization failed - {exc}",
@@ -469,22 +475,18 @@ class SophosDeviceAssetConnector(AssetConnector):
                     skipped += 1
                     continue
 
-                if endpoint.id and endpoint.id in self._sent_ids:
-                    if current_fp == self._sent_ids[endpoint.id]["fingerprint"]:
-                        deduplicated += 1
-                        continue
+                device_id = mapped.device.uid
+                cached = self._sent_ids.get(device_id)
+                if cached is not None and cached["fingerprint"] == current_fp:
+                    deduplicated += 1
+                    continue
 
-                mapped = self.map_device_fields(endpoint)
-                if mapped is not None:
-                    total += 1
-                    if endpoint.id and current_fp is not None:
-                        self._sent_ids[endpoint.id] = {
-                            "fingerprint": current_fp,
-                            "cached_at": datetime.now(tz=UTC).isoformat(),
-                        }
-                    yield mapped
-                else:
-                    skipped += 1
+                total += 1
+                self._sent_ids[device_id] = {
+                    "fingerprint": current_fp,
+                    "cached_at": datetime.now(tz=UTC).isoformat(),
+                }
+                yield mapped
         except Exception as exc:
             self.log(
                 f"Asset collection failed - collected={total}, skipped={skipped}, "
