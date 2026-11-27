@@ -1,0 +1,66 @@
+{
+  "name": "Test EasyVista Service Manager",
+  "slug": "test-easyvista-service-manager",
+  "uuid": "cecfcd15-cbca-4a5e-961d-ba850c0e59e2",
+  "version": "1.0.0",
+  "categories": [
+    "Collaboration Tools"
+  ],
+  "description": "Collect the device inventory of EasyVista Service Manager (test module for custom asset connectors).",
+  "supports_validation": true,
+  "configuration": {
+    "properties": {
+      "base_url": {
+        "description": "HTTPS protocol and host of the EasyVista server, without a path",
+        "title": "Base Url",
+        "type": "string",
+        "format": "uri"
+      },
+      "tenant_id": {
+        "description": "Non-empty EasyVista account number, including any leading zeros",
+        "title": "Tenant Id",
+        "type": "string",
+        "minLength": 1,
+        "pattern": "\\S"
+      },
+      "use_token": {
+        "default": true,
+        "title": "Use Token",
+        "type": "boolean",
+        "description": "Use access token (Bearer) authentication, recommended; false: Basic authentication"
+      },
+      "username": {
+        "title": "Username",
+        "type": "string",
+        "description": "REST API user login; required when use_token is false"
+      },
+      "password": {
+        "title": "Password",
+        "type": "string",
+        "description": "REST API user password; required when use_token is false"
+      },
+      "token": {
+        "title": "Token",
+        "type": "string",
+        "description": "EasyVista access token; required when use_token is true"
+      },
+      "verify_ssl": {
+        "default": true,
+        "title": "Verify Ssl",
+        "type": "boolean",
+        "description": "Verify the server TLS certificate"
+      }
+    },
+    "required": [
+      "base_url",
+      "tenant_id"
+    ],
+    "title": "EasyVistaConfiguration",
+    "type": "object",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "secrets": [
+      "password",
+      "token"
+    ]
+  }
+}
